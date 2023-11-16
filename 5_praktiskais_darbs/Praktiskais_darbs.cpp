@@ -1,6 +1,7 @@
 #include <iostream>
 #include <fstream>
 #include <vector>
+#include <string>
 
 using namespace std;
 
@@ -14,7 +15,7 @@ struct InventoryItem { //structure for items
 
 class InventoryManager {
 private:
-    verctor<InventoryItem> inventory; //place to save items 
+    vector<InventoryItem> inventory; //place to save items 
 
 public:
     void addItem() { //endijs
@@ -55,7 +56,8 @@ public:
     }
 
     void saveInventory(const string& name, int newQuantity) { //endijs
-        ofstream outFile("mytfile.txt", ios::out | ios::binary)
+        ofstream outFile("mytfile.txt", ios::out | ios::binary);
+        InventoryItem item;
 
         if(outFile.is_open()){
             if(item.name == name){
