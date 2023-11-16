@@ -33,35 +33,37 @@ public:
         cout << "\nIevadiet produkta daudzumu: ";
         cin >> item.quantity;
 
-        //ja tads jau ir tad pieskaita skaitu
         item.sold_quantity = 0;
 
         saveInventory(item.name, item.quantity);
-        inventory.push_back(item);
-    
     }
 
     void displayItems() { //endijs
-        cout << "Produkti noliktava: \n";
-        cout << endl;
-        cout << "Nosaukums\t\tCena\t\tPieejamais daudzums\t\tPardotais daudzums\n";
-        cout << "---------------------------------------------------------------------\n";
+        loadInventory();
 
-        for(const auto& item: inventory){
-            cout << item.name << "\t\t" << item.price << "\t\t" << item.quantity << "\t\t" << item.sold_quantity << "\n"; 
+        if(!inventory.empty()){
+            cout << "Produkti noliktava: \n";
+            cout << endl;
+            cout << "Nosaukums\t\tCena\t\tPieejamais daudzums\t\tPardotais daudzums\n";
+            cout << "---------------------------------------------------------------------\n";
+
+            for(const auto& item: inventory){
+                cout << item.name << "\t\t" << item.price << "\t\t" << item.quantity << "\t\t" << item.sold_quantity << "\n"; 
+            }
+
+            cout << "---------------------------------------------------------------------\n";
+        }else{
+            cout << "Nav pieejams neviens produkts" << endl;
         }
-
-        cout << "---------------------------------------------------------------------\n";
-
     }
 
     void saveInventory(const string& name, int newQuantity) { //endijs
-        ofstream outFile("mytfile.txt", ios::out | ios::binary);
-        InventoryItem item;
+        ofstream outFile("myfile.txt", ios::out | ios::binary)
 
         if(outFile.is_open()){
-            if(item.name == name){
+            if(item.name == name){ //ja tads jau eksiste
                 item.quantity += newQuantity;
+                cout << "Sads produkts jau pastav, tadel tam tika papildinats jusu ievaditais daudzums!" << endl;
             }else{
                 int nameLength = item.name.length();
                 outFile.write(reinterpret_cast<const char*>(&nameLength), sizeof(int));
@@ -69,6 +71,7 @@ public:
                 outFile.write(reinterpret_cast<const char*>(&item.price), sizeof(double));
                 outFile.write(reinterpret_cast<const char*>(&item.quantity), sizeof(int));
                 outFile.write(reinterpret_cast<const char*>(&item.sold_quantity), sizeof(int));
+                cout << "Produkts ir veiksmigi saglabats binaraja faila!" << endl;
             }
         }else{
             cout << "Radas problemas ar faila atversanu!" << endl;
@@ -76,9 +79,47 @@ public:
         }
 
         outFile.close();
-        cout << "Produkts ir veiksmigi saglabats binaraja faila!" << endl;
-
     } 
+
+    void loadInventory() {
+        ifstream inFile("myfile.txt", ios::in | ios::binary);
+
+        if(inFile.is_open()){
+            while(true){
+                int numLength;
+                inFile.read(reinterpret_cast<char*>(&numLength), sizeof(int));
+
+                if (infile.eof()){
+                    break;
+                }
+
+                string name(nameLength, \0);
+                inFile.read(&name[0], numLength);
+
+                double price;
+                inFile.read(reinterpret_cast<char*>(&price), sizeof(double));
+
+                int quantity;
+                inFile.read(reinterpret_cast<char*>(&quantity), sizeof(int));
+
+                int sold_quantity;
+                inFile.read(reinterpret_cast<char*>(&sold_quantity), sizeof(int));
+
+                InventoryItem item;
+                item.name = name;
+                item.price = price;
+                item.quantity = quantity;
+                item.sold_quantity = sold_quantity;
+
+                inventory.push_back(item);
+            }
+        }else{
+            cout << "Radas problemas ar faila atversanu!" << endl;
+            return;
+        }
+
+        inFile.close();
+    }
 
     void sellItem() { //roberts
         string name;
