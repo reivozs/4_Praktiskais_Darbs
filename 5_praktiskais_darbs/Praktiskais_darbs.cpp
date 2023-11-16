@@ -81,7 +81,20 @@ public:
     } 
 
     void sellItem() { //roberts
+        string name;
+        int saleNum;
 
+        cout << "Ievadiet nosaukumu no produkta, kuru Jums gribas pardot:" << endl;
+        getline(cin, name);
+
+        if (find(inventory.begin(), inventory.end(), name) != inventory.end()) {
+            cout << "Ievadiet cik produktus gribat pardot" << endl;
+            cin >> saleNum;
+            if (saleNum <= inventory[find(inventory.begin(), inventory.end(), name)])
+        }
+        else {
+            cout << "Sis produkts vel neeksiste" << endl;
+        }
     }
 
     void searchItem() { //roberts
