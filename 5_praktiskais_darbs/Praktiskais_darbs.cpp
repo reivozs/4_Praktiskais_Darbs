@@ -2,6 +2,8 @@
 #include <fstream>
 #include <vector>
 #include <string>
+#include <algorithm>
+#include <limits>
 
 using namespace std;
 
@@ -11,6 +13,20 @@ struct InventoryItem { //structure for items
     int quantity;
     int sold_quantity;
     bool saved;
+};
+
+enum multChoice {
+    ADD = 1,
+    ALLITEMS = 2,
+    SELLITEM = 3,
+    SPECIFICITEM = 4,
+    MAXSOLD = 5,
+    MINSOLD = 6,
+    MAXINCOME = 7,
+    MININCOME = 8,
+    MAXPRICE = 9,
+    MINPRICE = 10,
+    STOP = 11
 };
 
 class InventoryManager {
@@ -35,28 +51,39 @@ public:
 
         item.sold_quantity = 0;
 
-        saveInventory(item.name, item.quantity);
+        ofstream productFile("produkti.dat", ios::binary | ios::app);
+        if (productFile.is_open()) {
+            productFile.write(reinterpret_cast<char*>(&item), sizeof(InventoryItem));
+            productFile.close();
+        } else {
+            cerr << "Error opening file for writing." << endl;
+        }
     }
 
     void displayItems() { //endijs
-        loadInventory();
+        ifstream productData("produkti.dat", ios::binary);
 
-        if(!inventory.empty()){
+        if(productData.is_open()) {
+            InventoryItem item;
+
             cout << "Produkti noliktava: \n";
             cout << endl;
             cout << "Nosaukums\t\tCena\t\tPieejamais daudzums\t\tPardotais daudzums\n";
             cout << "---------------------------------------------------------------------\n";
 
-            for(const auto& item: inventory){
-                cout << item.name << "\t\t" << item.price << "\t\t" << item.quantity << "\t\t" << item.sold_quantity << "\n"; 
+            while (productData.read(reinterpret_cast<char*>(&item), sizeof(InventoryItem))) {
+                cout << item.name << "\t\t" << item.price << "\t\t" << item.quantity << "\t\t" << item.sold_quantity << endl;
             }
 
             cout << "---------------------------------------------------------------------\n";
-        }else{
-            cout << "Nav pieejams neviens produkts" << endl;
+
+            productData.close();
+        }
+        else{
+            cout << "Kluda, fails neatveras" << endl;
         }
     }
-
+    /*
     void saveInventory(const string& name, int newQuantity) { //endijs
         ofstream outFile("myfile.txt", ios::out | ios::binary)
 
@@ -120,38 +147,239 @@ public:
 
         inFile.close();
     }
+    */
+    void sellItem() {
+    InventoryItem item;
 
-    void sellItem() { //roberts
-        string name;
-        int saleNum;
+    ifstream productData("produkti.dat", ios::binary | ios::in);
+    ofstream newProductData("jaunieProdukti.dat", ios::binary | ios::out | ios::app);
 
-        cout << "Ievadiet nosaukumu no produkta, kuru Jums gribas pardot:" << endl;
-        getline(cin, name);
+    if (productData.is_open() && newProductData.is_open()) {
+        string productName;
+        int amount;
+        bool found = false;
 
-        if (find(inventory.begin(), inventory.end(), name) != inventory.end()) {
-            cout << "Ievadiet cik produktus gribat pardot" << endl;
-            cin >> saleNum;
-            if (saleNum <= inventory[find(inventory.begin(), inventory.end(), name)])
+        cout << "Ievadiet produkta nosaukumu no produkta, kuru gribat pardot" << endl;
+        cin.ignore();
+        getline(cin, productName);
+
+        cout << "Ievadiet produkta daudzumu:" << endl;
+        cin >> amount;
+
+        while (productData.read(reinterpret_cast<char*>(&item), sizeof(InventoryItem))) {
+            if (productName == item.name) {
+                found = true;
+
+                if (amount <= item.quantity) {
+                    item.quantity -= amount;
+                    item.sold_quantity += amount;
+                } else {
+                    cout << "Nav pietiekosu produktu!" << endl;
+                }
+            }
+            newProductData.write(reinterpret_cast<char*>(&item), sizeof(InventoryItem));
+        }
+
+        productData.close();
+        newProductData.close();
+
+        remove("produkti.dat");
+        rename("jaunieProdukti.dat", "produkti.dat");
+    } else {
+        cout << "Kluda, fails neatveras" << endl;
+    }
+}
+
+    void displaySpecificItem() {
+        InventoryItem item;
+
+        ifstream productData("produkti.dat", ios::binary | ios::in);
+
+        if (productData.is_open()) {
+            string productName;
+            bool found = false;
+
+            cout << "Ievadiet produkta nosaukumu, par kuru gribat uzzinat vairak:" << endl;
+            cin.ignore();
+            getline(cin, productName);
+
+            while (productData.read(reinterpret_cast<char*>(&item), sizeof(InventoryItem))) {
+                if (productName == item.name) {
+                    found = true;
+
+                    cout << "Produkts noliktava: \n";
+                    cout << endl;
+                    cout << "Nosaukums\t\tCena\t\tPieejamais daudzums\t\tPardotais daudzums\n";
+                    cout << "---------------------------------------------------------------------\n";
+
+                    cout << item.name << "\t\t" << item.price << "\t\t" << item.quantity << "\t\t" << item.sold_quantity << endl;
+
+                    cout << "---------------------------------------------------------------------\n";
+                }
+            }
+
+            if (found == false) {
+                cout << "Sis produkts netika atrasts" << endl;
+            }
+            productData.close();
+        } else {
+            cout << "Kluda, fails neatveras" << endl;
+        }
+    }
+
+    void top3MinSold() {
+        ifstream productData("produkti.dat", ios::binary);
+        vector<InventoryItem> items;
+        InventoryItem item;
+        
+        if (productData.is_open()) {
+            
+            while (productData.read(reinterpret_cast<char*>(&item), sizeof(InventoryItem))) {
+                items.push_back(item);
+        }
+
+        sort(items.begin(), items.end(), [](const InventoryItem& a, const InventoryItem& b) {
+                return a.sold_quantity < b.sold_quantity;
+            });
+        
+        cout << "Vis mazak pardotie 3 produkti ir:" << endl;
+        cout << "nosaukums \t\t pardotais skaits" << endl;
+
+        int minNum = min(static_cast<int>(items.size()), 3);
+            for (int i = 0; i < minNum; ++i) {
+                cout << items[i].name << "\t\t" << items[i].sold_quantity << endl;
+            }
+
+        productData.close();
         }
         else {
-            cout << "Sis produkts vel neeksiste" << endl;
+            cout << "Kluda, fails neatveras" << endl;
+        }
+    }
+    
+    void top3MaxIncome() {
+        ifstream productData("produkti.dat", ios::binary);
+        vector<InventoryItem> items;
+        InventoryItem item;
+
+        if (productData.is_open()) {
+            while (productData.read(reinterpret_cast<char*>(&item), sizeof(InventoryItem))) {
+                items.push_back(item);
+            }
+
+            sort(items.begin(), items.end(), [](const InventoryItem& a, const InventoryItem& b) {
+                return (a.price * a.sold_quantity) > (b.price * b.sold_quantity);
+            });
+
+            cout << "Top 3 augstakie ienakumi ir:" << endl;
+            cout << "Nosaukums \t Ienakumi" << endl;
+
+            int maxNum = min(static_cast<int>(items.size()), 3);
+            for (int i = 0; i < maxNum; ++i) {
+                cout << items[i].name << "\t\t" << (items[i].price * items[i].sold_quantity) << endl;
+            }
+
+            productData.close();
+        } else {
+            cout << "Kluda, fails neatveras" << endl;
         }
     }
 
-    void searchItem() { //roberts
 
+    void top3MinPrice() {
+    ifstream productData("produkti.dat", ios::binary);
+    vector<InventoryItem> items;
+    InventoryItem item;
+
+    if (productData.is_open()) {
+        while (productData.read(reinterpret_cast<char*>(&item), sizeof(InventoryItem))) {
+            items.push_back(item);
+        }
+
+        sort(items.begin(), items.end(), [](const InventoryItem& a, const InventoryItem& b) {
+            return a.price < b.price;
+        });
+
+        cout << "Vis letakie 3 produkti ir:" << endl;
+        cout << "Nosaukums \t Cena" << endl;
+
+        int minNum = min(static_cast<int>(items.size()), 3);
+        for (int i = 0; i < minNum; ++i) {
+            cout << items[i].name << "\t\t" << items[i].price << endl;
+        }
+
+        productData.close();
+    } else {
+        cout << "Kluda, fails neatveras" << endl;
     }
-
-}
+    }
+};
 
 int main() {
-    InventoryManager inventorymanager;
+    InventoryManager inventoryManager;
+    bool works = true;
     int choice;
 
-    while(true) { // izvelne Roberts (switch)
-        
+    while(works) {
+    cout << "Jusu izveles ir:\n"
+    "1: Produkta ievade\n" 
+    "2: Visu produktu datu izvade\n"
+    "3: Pardot produktu\n"
+    "4: Konkreti dati par vienu produktu\n"
+    "5: Top3 visvairak iztirgotie produkti\n"
+    "6: Top3 vismazak iztirgotie produkti\n"
+    "7: Top3 produkti par kuriem ir visvairak nopelnits\n"
+    "8: Top3 produkti par kuriem ir vismazak nopelnits\n"
+    "9: Top3 visletakie produkti\n"
+    "10: Top3 visletakie produkti\n"
+    "11: Beigt darbibu\n";
 
+    do {
+                cout << "Ludzu ievadiet savu izveli (1-11):\n";
+                cin >> choice;
 
+                if (cin.fail()) {
+
+                    cin.clear();
+                    cin.ignore(numeric_limits<streamsize>::max(), '\n');
+                }
+            } while (choice < 1 || choice >11);
+    
+
+    switch (choice) {
+        case ADD:
+        inventoryManager.addItem();
+        break;
+        case ALLITEMS:
+        inventoryManager.displayItems();
+        break;
+        case SELLITEM:
+        inventoryManager.sellItem();
+        break;
+        case SPECIFICITEM:
+        inventoryManager.displaySpecificItem();
+        break;
+        case MAXSOLD:
+        break;
+        case MINSOLD:
+        inventoryManager.top3MinSold();
+        break;
+        case MAXINCOME:
+        inventoryManager.top3MaxIncome();
+        break;
+        case MININCOME:
+        break;
+        case MAXPRICE:
+        break;
+        case MINPRICE:
+        inventoryManager.top3MinPrice();
+        break;
+        case STOP:
+        works = false;
+        break;
     }
+    }
+
     return 0;
 }
+
