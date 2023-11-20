@@ -116,59 +116,71 @@ public:
     }
 
     void sellItem() {
-        InventoryItem item;
-
         ifstream productData("produkti.dat", ios::binary | ios::in);
-        ofstream newProductData("jaunieProdukti.dat", ios::binary | ios::out | ios::app);
+        vector<InventoryItem> updatedItems;
+        InventoryItem item;
+        char productName[50];
+        int amount;
+        bool found = false;
 
-        if (productData.is_open() && newProductData.is_open()) {
-            string productName;
-            int amount;
-            bool found = false;
+        if (!productData.is_open()) {
+            cout << "\nDati nav pieejami!" << endl;
+            return;
+        }
 
-            cout << "\nIevadiet produkta nosaukumu no produkta, kuru gribat pardot" << endl;
-            cin.ignore();
-            getline(cin, productName);
+        cout << "\nIevadiet produkta nosaukumu no produkta, kuru gribat pardot" << endl;
+        cin.ignore();
+        cin.getline(productName, 50);
 
-            cout << "\nIevadiet produkta daudzumu:" << endl;
-            cin >> amount;
+        cout << "\nIevadiet produkta daudzumu:" << endl;
+        cin >> amount;
 
-            while (productData.read(reinterpret_cast<char*>(&item), sizeof(InventoryItem))) {
-                if (productName == item.name) {
-                    found = true;
+        while (productData.read(reinterpret_cast<char*>(&item), sizeof(InventoryItem))) {
+            if (strncmp(productName, item.name, sizeof(item.name)) == 0) {
+                found = true;
 
-                    if (amount <= item.quantity) {
-                        item.quantity -= amount;
-                        item.sold_quantity += amount;
-                    } else {
-                        cout << "\nNav pietiekosu produktu!" << endl;
-                    }
+                if (amount <= item.quantity) {
+                    item.quantity -= amount;
+                    item.sold_quantity += amount;
+                } else {
+                    cout << "\nNav pietiekosu produktu!" << endl;
                 }
-                newProductData.write(reinterpret_cast<char*>(&item), sizeof(InventoryItem));
+            }
+            updatedItems.push_back(item);
+        }
+
+        productData.close();
+        if (found = false) {
+            cout << "\nSis produkts netika atrasts" << endl;
+            return;
+        }
+
+        ofstream outFile("produkti.dat", ios::out | ios::binary);
+
+        if (outFile.is_open()) {
+            for (size_t i = 0; i < updatedItems.size(); ++i) {
+                outFile.write(reinterpret_cast<const char*>(&updatedItems[i]), sizeof(InventoryItem));
             }
 
-            productData.close();
-            newProductData.close();
-
-            remove("produkti.dat");
-            rename("jaunieProdukti.dat", "produkti.dat");
+            outFile.close();
+            cout << "\nDati ir veiksmīgi atjaunoti!" << endl;
         } else {
-            cout << "\nKluda, fails neatveras" << endl;
+            cout << "\nNeizdevas atjaunot datus!" << endl;
         }
     }
 
-    void displaySpecificItem() {
+    void displaySpecificItem() {  //roberts
         InventoryItem item;
 
         ifstream productData("produkti.dat", ios::binary | ios::in);
 
         if (productData.is_open()) {
-            string productName;
+            char productName[50];
             bool found = false;
 
             cout << "\nIevadiet produkta nosaukumu, par kuru gribat uzzinat vairak:" << endl;
             cin.ignore();
-            getline(cin, productName);
+            cin >> productName;
 
             while (productData.read(reinterpret_cast<char*>(&item), sizeof(InventoryItem))) {
                 if (productName == item.name) {
@@ -190,7 +202,7 @@ public:
             }
             productData.close();
         } else {
-            cout << "\nKluda, fails neatveras" << endl;
+            cout << "\nDati nav pieejami!" << endl;
         }
     }
 
@@ -222,7 +234,7 @@ public:
         }
     }
 
-    void top3MinSold() {
+    void top3MinSold() {  //roberts
         ifstream productData("produkti.dat", ios::binary);
         vector<InventoryItem> items; 
         InventoryItem item;
@@ -239,10 +251,9 @@ public:
             cout << "\nVis mazak pardotie 3 produkti ir:" << endl;
             cout << "nosaukums \t\t pardotais skaits" << endl;
 
-            int minNum = min(static_cast<int>(items.size()), 3);
-                for (int i = 0; i < minNum; ++i) {
-                    cout << items[i].name << "\t\t" << items[i].sold_quantity << endl;
-                }
+            for (int i = 0; i < 3; ++i) {
+                cout << items[i].name << "\t\t" << items[i].sold_quantity << endl;
+            }
 
             productData.close();
         }
@@ -251,7 +262,7 @@ public:
         }
     }
     
-    void top3MaxIncome() {
+    void top3MaxIncome() {  //roberts
         ifstream productData("produkti.dat", ios::binary);
         vector<InventoryItem> items;
         InventoryItem item;
@@ -274,7 +285,7 @@ public:
 
             productData.close();
         } else {
-            cout << "\nKluda, fails neatveras" << endl;
+            cout << "\nDati nav pieejami!" << endl;
         }
     }
 
@@ -306,7 +317,7 @@ public:
         }
     }
 
-    void top3MinPrice() {
+    void top3MinPrice() {  //roberts
         ifstream productData("produkti.dat", ios::binary);
         vector<InventoryItem> items;
         InventoryItem item;
@@ -323,14 +334,13 @@ public:
             cout << "\nVis letakie 3 produkti ir:" << endl;
             cout << "Nosaukums \t Cena" << endl;
 
-            int minNum = min(static_cast<int>(items.size()), 3);
-            for (int i = 0; i < minNum; ++i) {
+            for (int i = 0; i < 3; ++i) {
                 cout << items[i].name << "\t\t" << items[i].price << endl;
             }
 
             productData.close();
         } else {
-            cout << "\nKluda, fails neatveras" << endl;
+            cout << "\nDati nav pieejami!" << endl;
         }
         }
 
@@ -363,7 +373,7 @@ public:
     }
 };
 
-int main() {
+int main() {  //roberts
     InventoryManager inventoryManager;
     bool works = true;
     int choice;
